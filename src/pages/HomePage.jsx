@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
 import axios from 'axios';
 import SearchBar from '../components/SearchBar';
 import Schedule from '../components/Schedule';
-import styles from '../styles/HomePage.module.css';
 import { ClipLoader } from 'react-spinners';
 
 const HomePage = () => {
   const [scheduleItems, setScheduleItems] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchSchedule = async () => {
@@ -14,20 +15,22 @@ const HomePage = () => {
         const response = await axios.get('https://anilibria.top/api/v1/anime/schedule/week');
         setScheduleItems(response.data);
       } catch (error) {
-        console.error('Ошибка получения расписания:', error);
+        navigate('/error');
       }
     };
 
     fetchSchedule();
-  }, []);
+  }, [navigate]);
 
   return (
-    <div className={styles.homepage}>
-      <SearchBar />
+    <div className="px-4 py-6 md:px-8 md:py-10 max-w-7xl mx-auto">
+      <div className="mb-8">
+        <SearchBar />
+      </div>
       {scheduleItems ? (
         <Schedule scheduleItems={scheduleItems} />
       ) : (
-        <div className={styles.loader}>
+        <div className="flex justify-center items-center min-h-[300px]">
           <ClipLoader color="#3498db" size={50} />
         </div>
       )}
