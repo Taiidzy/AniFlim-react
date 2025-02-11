@@ -5,6 +5,7 @@ import axios from "axios";
 import { FiMenu, FiX } from "react-icons/fi";
 import SideBar from "../components/anime/SideBar";
 import EpisodesList from "../components/anime/EpisodesList";
+import AgeRatingBadge from "../components/anime/AgeRatingBadge";
 
 const AnimePage = () => {
   const { id } = useParams();
@@ -18,6 +19,7 @@ const AnimePage = () => {
         const response = await axios.get(
           `https://anilibria.top/api/v1/anime/releases/${id}`
         );
+        console.log(response.data);
         setAnime(response.data);
       } catch (error) {
         navigate('/error');
@@ -69,6 +71,12 @@ const AnimePage = () => {
             <p className="mb-4 text-gray-400 text-sm md:text-base leading-relaxed">
               {anime.description}
             </p>
+            <div className="mb-4 flex flex-wrap justify-center md:justify-start gap-3">
+              <AgeRatingBadge 
+                label={anime.age_rating.label} 
+                description={anime.age_rating.description} 
+              />
+            </div>
             {anime.genres?.length > 0 && (
               <div className="flex flex-wrap justify-center md:justify-start gap-2">
                 {anime.genres.map((genre) => (

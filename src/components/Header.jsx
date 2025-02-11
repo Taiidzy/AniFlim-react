@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import SearchBar from './SearchBar';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -11,7 +12,7 @@ const Header = () => {
   }
 
   return (
-    <header className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 shadow-lg">
+    <header className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 shadow-lg z-100">
       <div className="container mx-auto flex items-center justify-between">
         <h1 className="text-2xl md:text-4xl font-bold hover:text-indigo-300 transition-colors duration-200">
           <Link to="/">AniFlim</Link>
@@ -28,6 +29,7 @@ const Header = () => {
           <Link to="/profile" className="text-base md:text-lg hover:text-indigo-300 transition-colors duration-200">
             Профиль
           </Link>
+          <SearchBar />
         </nav>
 
         {/* Кнопка для открытия мобильного меню */}
@@ -39,6 +41,9 @@ const Header = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
+        <div className="block md:hidden">
+          <SearchBar />  {/* Отображается только на мобильных */}
+        </div>
       </div>
 
       {/* Мобильное меню */}

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import Hls from 'hls.js';
-import * as Icons from '../components/player/Icons';
+import * as Icons from '../components/Icons';
 
 const PlayerPage = () => {
   const { id } = useParams();
@@ -216,7 +216,7 @@ const PlayerPage = () => {
                   }}
                   className="flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 bg-red-600/90 hover:bg-red-700 rounded-full transition-all"
                 >
-                  <Icons.NextIcon className="text-base sm:text-lg text-amber-50" />
+                  <Icons.NextIcon className="text-base sm:text-lg text-amber-50 cursor-pointer" />
                   <span className="text-xs sm:text-sm hidden sm:inline">Пропустить опенинг</span>
                 </button>
               )}
@@ -228,7 +228,7 @@ const PlayerPage = () => {
                   }}
                   className="flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 bg-red-600/90 hover:bg-red-700 rounded-full transition-all"
                 >
-                  <Icons.NextIcon className="text-base sm:text-lg text-amber-50" />
+                  <Icons.NextIcon className="text-base sm:text-lg text-amber-50 cursor-pointer" />
                   <span className="text-xs sm:text-sm hidden sm:inline">Пропустить эндинг</span>
                 </button>
               )}
@@ -245,9 +245,9 @@ const PlayerPage = () => {
                 className="p-1 sm:p-2 text-white hover:text-red-500 transition-colors"
               >
                 {isPlaying ? (
-                  <Icons.StopIcon className="w-6 h-6 sm:w-8 sm:h-8 text-amber-50" />
+                  <Icons.StopIcon className="w-6 h-6 sm:w-8 sm:h-8 text-amber-50 cursor-pointer" />
                 ) : (
-                  <Icons.PlayIcon className="w-6 h-6 sm:w-8 sm:h-8 text-amber-50" />
+                  <Icons.PlayIcon className="w-6 h-6 sm:w-8 sm:h-8 text-amber-50 cursor-pointer" />
                 )}
               </button>
 
@@ -257,9 +257,9 @@ const PlayerPage = () => {
                   className="p-1 sm:p-2 text-white hover:text-red-500 transition-colors"
                 >
                   {isMuted ? (
-                    <Icons.VolumeMute02Icon className="w-5 h-5 sm:w-6 sm:h-6 text-amber-50" />
+                    <Icons.VolumeMute02Icon className="w-5 h-5 sm:w-6 sm:h-6 text-amber-50 cursor-pointer" />
                   ) : (
-                    <Icons.VolumeHighIcon className="w-5 h-5 sm:w-6 sm:h-6 text-amber-50" />
+                    <Icons.VolumeHighIcon className="w-5 h-5 sm:w-6 sm:h-6 text-amber-50 cursor-pointer" />
                   )}
                 </button>
                 <input
@@ -278,7 +278,7 @@ const PlayerPage = () => {
                 onClick={() => setShowEpisodes(!showEpisodes)}
                 className="p-1 sm:p-2 text-white hover:text-red-500 transition-colors"
               >
-                <Icons.LeftToRightListBulletIcon className="w-5 h-5 sm:w-6 sm:h-6 text-red-500" />
+                <Icons.LeftToRightListBulletIcon className="w-5 h-5 sm:w-6 sm:h-6 text-red-500 cursor-pointer" />
               </button>
             </div>
 
@@ -287,7 +287,7 @@ const PlayerPage = () => {
               <select
                 value={quality}
                 onChange={(e) => setQuality(e.target.value)}
-                className="bg-gray-800/70 text-white text-sm sm:text-base px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg backdrop-blur-sm border border-gray-600 focus:border-red-500 outline-none transition-all"
+                className="bg-gray-800/70 text-white text-sm sm:text-base px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg backdrop-blur-sm border border-gray-600 focus:border-red-500 outline-none transition-all cursor-pointer"
               >
                 {Object.keys(episode)
                   .filter(key => key.startsWith('hls_'))
@@ -325,7 +325,7 @@ const PlayerPage = () => {
             onClick={() => setShowEpisodes(false)}
             className="p-1 text-gray-400 hover:text-red-500 transition-colors"
           >
-            <Icons.Cancel01Icon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-50" />
+            <Icons.Cancel01Icon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-50 cursor-pointer" />
           </button>
         </div>
         

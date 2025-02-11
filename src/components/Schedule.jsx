@@ -32,7 +32,7 @@ const Schedule = ({ scheduleItems }) => {
         {daysOfWeek.map((day) => (
           <button
             key={day.value}
-            className={`px-4 py-2 mx-1 min-w-[70px] text-sm md:text-base rounded-lg transition-colors ${
+            className={`px-4 py-2 mx-1 min-w-[70px] text-sm md:text-base rounded-lg transition-colors cursor-pointer ${
               day.value === selectedDay 
                 ? 'bg-orange-500 text-white' 
                 : 'bg-gray-700 hover:bg-gray-600 text-gray-300'

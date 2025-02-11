@@ -5,7 +5,7 @@ import Torrents from "./sidebar.components/Torrents";
 
 const SideBar = ({ members, torrents, onClose }) => {
     return (
-      <div className="h-full p-4 lg:p-6 overflow-y-auto rounded-lg shadow-lg">
+      <div className="h-full p-4 lg:p-6 overflow-y-auto rounded-lg shadow-lg z-10">
         {/* Mobile Close Button */}
         <button
           onClick={onClose}
@@ -26,12 +26,12 @@ const SideBar = ({ members, torrents, onClose }) => {
         </h2>
         <Members members={members} />
         
-        <hr className="border-t border-gray-600 my-4" />
+        {/* <hr className="border-t border-gray-600 my-4" />
         
         <h2 className="text-base lg:text-lg font-semibold text-white mb-3">
           Торренты
         </h2>
-        <Torrents torrents={torrents} />
+        <Torrents torrents={torrents} /> */}
       </div>
     );
 };

@@ -2,9 +2,9 @@ import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
-const ErrorPage = ({
+const ProfilePage = ({
   title = "Ой! Что-то пошло не так",
-  description = "Произошла непредвиденная ошибка. Пожалуйста, попробуйте обновить страницу или повторить попытку позже.",
+  description = "На данный момент на сайте не реализована система регистрации и авторизации. Пожалуйста, попробуйте повторить попытку позже.",
   buttonText = "На главную",
 }) => {
   const navigate = useNavigate();
@@ -87,4 +87,4 @@ const ErrorPage = ({
   );
 };
 
-export default ErrorPage;
+export default ProfilePage;

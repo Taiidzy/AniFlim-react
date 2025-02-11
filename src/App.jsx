@@ -5,6 +5,7 @@ import AnimePage from "./pages/AnimePage";
 import PlayerPage from "./pages/PlayerPage";
 import RandomPage from "./pages/RandomPage";
 import ErrorPage from "./pages/ErrorPage";
+import ProfilePage from "./pages/ProfilePage";
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route path="/anime/:id" element={<AnimePage />} />
           <Route path="/episode/:id" element={<PlayerPage />} />
           <Route path="/random" element={<RandomPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/error" element={<ErrorPage />} />
         </Routes>
       </main>

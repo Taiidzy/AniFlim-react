@@ -7,3 +7,4 @@ export { default as Tv01Icon } from "./icons/tv-01-stroke-rounded";
 export { default as Cancel01Icon } from "./icons/cancel-01-stroke-rounded";
 export { default as NextIcon } from "./icons/next-stroke-rounded";
 export { default as ArrowLeft02Icon } from "./icons/arrow-left-02-stroke-rounded";
+export { default as Search02Icon } from "./icons/search-02-stroke-rounded";

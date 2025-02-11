@@ -1,6 +1,6 @@
 export const downloadTorrent = async (id) => {
   try {
-    const response = await fetch(`http://192.168.0.102:3001/torrent/${id}`, {
+    const response = await fetch(`http://aniflim.space/api/torrent/${id}`, {
       method: 'GET',
     });
 
