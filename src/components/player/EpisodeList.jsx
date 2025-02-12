@@ -5,9 +5,6 @@ import * as Icons from '../Icons'; // проверьте путь к иконк�
 
 const EpisodeList = ({ episodes, showEpisodes, setShowEpisodes, currentEpisodeId }) => {
   if (!episodes) return null;
-
-  console.log("currentEpisodeId:", currentEpisodeId);
-  console.log("episodes:", episodes);
   
   return (
     <div
