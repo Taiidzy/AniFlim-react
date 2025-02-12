@@ -1,4 +1,5 @@
 import { FiUser, FiAlertTriangle } from "react-icons/fi";
+import * as Icons from "../Icons";
 
 const AgeRatingBadge = ({ label, description }) => {
     // Определяем цвет в зависимости от рейтинга
@@ -12,7 +13,7 @@ const AgeRatingBadge = ({ label, description }) => {
   
     return (
       <div className={`${getRatingColor()} inline-flex items-center px-4 py-2 rounded-full border-2 backdrop-blur-sm transition-all hover:scale-105`}>
-        <FiAlertTriangle className="mr-2 text-white shrink-0" />
+        <Icons.Alert02Icon className="mr-2 text-white shrink-0" />
         <div className="text-white font-semibold tracking-wide">
             <span className="block text-sm leading-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                 {label}

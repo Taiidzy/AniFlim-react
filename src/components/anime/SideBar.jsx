@@ -2,8 +2,9 @@ import React from "react";
 import { FiX } from "react-icons/fi";
 import Members from "./sidebar.components/Members";
 import Torrents from "./sidebar.components/Torrents";
+import Franchises from "./sidebar.components/Franchises";
 
-const SideBar = ({ members, torrents, onClose }) => {
+const SideBar = ({ members, torrents, franchises, alias, onClose }) => {
     return (
       <div className="h-full p-4 lg:p-6 overflow-y-auto rounded-lg shadow-lg z-10">
         {/* Mobile Close Button */}
@@ -22,16 +23,24 @@ const SideBar = ({ members, torrents, onClose }) => {
         <hr className="border-t border-gray-600 my-4" />
         
         <h2 className="text-base lg:text-lg font-semibold text-white mb-3">
+          Франшизы
+        </h2>
+
+        <Franchises franchises={franchises} alias={alias} />
+        
+        <hr className="border-t border-gray-600 my-4" />
+        
+        <h2 className="text-base lg:text-lg font-semibold text-white mb-3">
           Участники
         </h2>
         <Members members={members} />
         
-        {/* <hr className="border-t border-gray-600 my-4" />
+        <hr className="border-t border-gray-600 my-4" />
         
         <h2 className="text-base lg:text-lg font-semibold text-white mb-3">
           Торренты
         </h2>
-        <Torrents torrents={torrents} /> */}
+        <Torrents torrents={torrents} />
       </div>
     );
 };

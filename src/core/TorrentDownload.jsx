@@ -1,18 +1,23 @@
 export const downloadTorrent = async (id) => {
   try {
-    const response = await fetch(`http://aniflim.space/api/torrent/${id}`, {
+    console.log(`[CLIENT] Отправляем запрос на скачивание торрента с ID: ${id}`);
+
+    const response = await fetch(`https://aniflim.space/api/torrent/${id}`, {
       method: 'GET',
     });
 
+    console.log(`[CLIENT] Ответ сервера: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      console.error('Ошибка при загрузке файла');
+      console.error(`[CLIENT] Ошибка при загрузке файла: ${response.status} ${response.statusText}`);
       return;
     }
 
     // Получаем заголовок Content-Disposition
     const contentDisposition = response.headers.get('Content-Disposition');
-    let filename = `${id}.torrent`; // Имя по умолчанию, если заголовка нет
+    console.log(`[CLIENT] Заголовок Content-Disposition:`, contentDisposition);
 
+    let filename = `${id}.torrent`;
     if (contentDisposition) {
       const match = contentDisposition.match(/filename="(.+?)"/);
       if (match) {
@@ -20,17 +25,21 @@ export const downloadTorrent = async (id) => {
       }
     }
 
+    console.log(`[CLIENT] Скачиваем файл с именем: ${filename}`);
+
     // Создаём ссылку для скачивания
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = filename; // Используем оригинальное имя файла
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
+
+    console.log(`[CLIENT] Файл ${filename} успешно скачан`);
   } catch (error) {
-    console.error('Ошибка:', error);
+    console.error(`[CLIENT] Ошибка:`, error);
   }
 };

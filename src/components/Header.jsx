@@ -26,9 +26,9 @@ const Header = () => {
           <Link to="/random" className="text-base md:text-lg hover:text-indigo-300 transition-colors duration-200">
             Случайный релиз
           </Link>
-          <Link to="/profile" className="text-base md:text-lg hover:text-indigo-300 transition-colors duration-200">
+          {/* <Link to="/profile" className="text-base md:text-lg hover:text-indigo-300 transition-colors duration-200">
             Профиль
-          </Link>
+          </Link> */}
           <SearchBar />
         </nav>
 

@@ -1,4 +1,6 @@
 import React from 'react';
+import { motion } from "framer-motion";
+import * as Icons from '../Icons';
 
 function MagnetButton({ magnet }) {
 
@@ -7,9 +9,6 @@ function MagnetButton({ magnet }) {
     // Check if Clipboard API is available
     if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
       navigator.clipboard.writeText(magnet)
-        .then(() => {
-          console.log('Текст скопирован!');
-        })
         .catch((err) => {
           console.error('Ошибка при копировании в буфер обмена: ', err);
         });
@@ -44,9 +43,14 @@ function MagnetButton({ magnet }) {
   };
 
   return (
-    <button id={magnet} onClick={handleDownload}>
-      <i className="mdi-magnet-on mdi text-gray-400 text-sm"></i>
-    </button>
+    <motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    className="font-semibold rounded-lg transition-colors duration-200 transform shadow-lg hover:shadow-purple-900/30 cursor-pointer"
+    >
+    
+      <Icons.Magnet02Icon className="text-gray-400 text-sm cursor-pointer" />
+  </motion.button>
   );
 }
 

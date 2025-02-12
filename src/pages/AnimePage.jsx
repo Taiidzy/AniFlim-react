@@ -6,12 +6,14 @@ import { FiMenu, FiX } from "react-icons/fi";
 import SideBar from "../components/anime/SideBar";
 import EpisodesList from "../components/anime/EpisodesList";
 import AgeRatingBadge from "../components/anime/AgeRatingBadge";
+import BlockPage from "./BlockPage";
 
 const AnimePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [anime, setAnime] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [franchises, setFranchises] = useState(null);
 
   useEffect(() => {
     const fetchAnime = async () => {
@@ -19,7 +21,6 @@ const AnimePage = () => {
         const response = await axios.get(
           `https://anilibria.top/api/v1/anime/releases/${id}`
         );
-        console.log(response.data);
         setAnime(response.data);
       } catch (error) {
         navigate('/error');
@@ -29,12 +30,34 @@ const AnimePage = () => {
     fetchAnime();
   }, [id, navigate]);
 
+  useEffect(() => {
+    if (!anime) return; // Проверка на null перед выполнением запроса
+  
+    const getFranchises = async () => {
+      try {
+        const response = await axios.get(
+          `https://anilibria.top/api/v1/anime/franchises/release/${anime.id}`
+        );
+        setFranchises(response.data);
+      } catch (error) {
+        navigate('/error');
+      }
+    };
+  
+    getFranchises();
+  }, [anime]); // Зависимостью остается только anime, без anime.id
+  
+
   if (!anime) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <ClipLoader color="#3498db" size={50} />
       </div>
     );
+  }
+
+  if (anime.is_blocked_by_geo == true) {
+    return <BlockPage />;
   }
 
   const posterUrl = anime.poster?.optimized?.src || anime.poster?.src || "";
@@ -96,12 +119,14 @@ const AnimePage = () => {
       </div>
 
       {/* Sidebar (Hidden on Mobile by Default) */}
-      <div className={`lg:static lg:translate-x-0 fixed top-0 right-0 h-full w-80 z-40 bg-gray-800 shadow-xl transition-transform duration-300 ease-in-out ${
+      <div className={`lg:static lg:translate-x-0 fixed top-0 right-0 h-full w-80 z-40 bg-gray-800 transition-transform duration-300 ease-in-out rounded-lg shadow-lg ${
         isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
       }`}>
         <SideBar 
           members={anime.members} 
-          torrents={anime.torrents} 
+          torrents={anime.torrents}
+          alias={anime.alias}
+          franchises={franchises}
           onClose={() => setIsSidebarOpen(false)}
         />
       </div>

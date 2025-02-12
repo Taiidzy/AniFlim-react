@@ -24,7 +24,7 @@ const Episode = ({ episodes }) => {
                                 <div className="absolute inset-0 bg-black/50 transition-opacity group-hover:bg-black/40"/>
                                 <div className="absolute inset-0 flex flex-col justify-center items-center text-center text-white p-3">
                                     <h3 className="text-base md:text-lg font-bold mb-1 truncate max-w-[90%]">
-                                        {episode.name || `Эпизод ${episode.ordinal}`}
+                                        {episode.name || ``}
                                     </h3>
                                     <p className="text-sm md:text-base text-gray-200">
                                         Эпизод {episode.ordinal}

@@ -18,7 +18,6 @@ const SearchBar = () => {
       }
       try {
         const response = await axios.get(`https://anilibria.top/api/v1/app/search/releases?query=${query}`);
-        console.log(response.data);
         setResults(response.data);
       } catch (error) {
         console.error('Ошибка поиска:', error);
