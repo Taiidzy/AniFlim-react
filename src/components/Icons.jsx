@@ -10,3 +10,6 @@ export { default as ArrowLeft02Icon } from "./icons/arrow-left-02-stroke-rounded
 export { default as Search02Icon } from "./icons/search-02-stroke-rounded";
 export { default as Magnet02Icon } from "./icons/magnet-02-stroke-rounded";
 export { default as Alert02Icon } from "./icons/alert-02-stroke-rounded";
+export { default as FullScreenIcon } from "./icons/full-screen-stroke-rounded";
+export { default as SquareArrowExpand01Icon } from "./icons/square-arrow-expand-01-stroke-rounded";
+export { default as SquareArrowShrink02Icon } from "./icons/square-arrow-shrink-02-stroke-rounded";

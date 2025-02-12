@@ -3,8 +3,11 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import * as Icons from '../Icons'; // проверьте путь к иконкам
 
-const EpisodeList = ({ episodes, showEpisodes, setShowEpisodes }) => {
+const EpisodeList = ({ episodes, showEpisodes, setShowEpisodes, currentEpisodeId }) => {
   if (!episodes) return null;
+
+  console.log("currentEpisodeId:", currentEpisodeId);
+  console.log("episodes:", episodes);
   
   return (
     <div
@@ -31,7 +34,7 @@ const EpisodeList = ({ episodes, showEpisodes, setShowEpisodes }) => {
             key={ep.id}
             to={`/episode/${ep.id}`}
             onClick={() => setShowEpisodes(false)}
-            className="group relative block rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all"
+            className={`group relative block rounded-lg overflow-hidden shadow-lg hover:shadow-xl border-2 transition-all ${currentEpisodeId == ep.id ? 'border-red-600' : ''}`}
           >
             <div className="aspect-video bg-gray-900">
               <div className="w-full h-full bg-cover bg-center transition-transform duration-300 hover:scale-105" style={{ backgroundImage: `url(https://anilibria.top${ep.preview.src})` }}>

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import Hls from 'hls.js';
 
 const VideoPlayer = ({
@@ -9,10 +9,11 @@ const VideoPlayer = ({
   currentTime,
   setCurrentTime,
   setIsPlaying,
-  togglePlayPause
+  togglePlayPause,
+  toggleFullscreen
 }) => {
-  const hlsRef = React.useRef(null);
-  const prevEpisodeIdRef = React.useRef(id);
+  const hlsRef = useRef(null);
+  const prevEpisodeIdRef = useRef(id);
 
   useEffect(() => {
     if (!episode || !videoRef.current || !quality) return;
@@ -20,12 +21,12 @@ const VideoPlayer = ({
     const video = videoRef.current;
     const wasPlaying = !video.paused;
     let savedTime = video.currentTime;
+    
     if (prevEpisodeIdRef.current !== id) {
       savedTime = 0;
     }
     prevEpisodeIdRef.current = id;
 
-    // Уничтожаем предыдущий экземпляр HLS, если он есть
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -59,7 +60,7 @@ const VideoPlayer = ({
   return (
     <video
       ref={videoRef}
-      className="h-full w-full object-contain"
+      className="h-full w-full object-cover"
       onTimeUpdate={() => {
         if (videoRef.current) {
           setCurrentTime(videoRef.current.currentTime);
@@ -68,6 +69,7 @@ const VideoPlayer = ({
       onPlay={() => setIsPlaying(true)}
       onPause={() => setIsPlaying(false)}
       onClick={togglePlayPause}
+      onDoubleClick={toggleFullscreen}
     />
   );
 };
