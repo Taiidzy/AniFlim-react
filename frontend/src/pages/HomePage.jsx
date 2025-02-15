@@ -12,6 +12,7 @@ const HomePage = () => {
     const fetchSchedule = async () => {
       try {
         const response = await axios.get('https://anilibria.top/api/v1/anime/schedule/week');
+        console.log(response.data);
         setScheduleItems(response.data);
       } catch (error) {
         navigate('/error');

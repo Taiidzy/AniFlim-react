@@ -6,6 +6,8 @@ import PlayerPage from "./pages/PlayerPage";
 import RandomPage from "./pages/RandomPage";
 import ErrorPage from "./pages/ErrorPage";
 import ProfilePage from "./pages/ProfilePage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 
 function App() {
   return (
@@ -19,6 +21,8 @@ function App() {
           <Route path="/episode/:id" element={<PlayerPage />} />
           <Route path="/random" element={<RandomPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
           <Route path="/error" element={<ErrorPage />} />
         </Routes>
       </main>

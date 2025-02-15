@@ -119,7 +119,7 @@ const AnimePage = () => {
       </div>
 
       {/* Sidebar (Hidden on Mobile by Default) */}
-      <div className={`lg:static lg:translate-x-0 fixed top-0 right-0 h-full w-80 z-40 bg-gray-800 transition-transform duration-300 ease-in-out rounded-lg shadow-lg ${
+      <div className={`lg:static lg:translate-x-0 fixed top-0 right-0 h-full w-80 z-40 bg-gray-800/90 backdrop-blur-sm transition-transform duration-300 ease-in-out rounded-xl p-8 shadow-2xl border-2 border-purple-500/30 ${
         isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
       }`}>
         <SideBar 

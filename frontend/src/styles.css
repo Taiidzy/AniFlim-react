@@ -123,3 +123,96 @@ body {
   scrollbar-width: thin; /* Тонкий скроллбар */
   scrollbar-color: #888 transparent; /* Цвет ползунка и трека */
 }
+
+@keyframes input-highlight {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.anime-input-group {
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.anime-input {
+  @apply w-full bg-gray-700/50 border-2 border-gray-600 rounded-lg px-4 py-3 text-gray-100 focus:outline-none;
+  transition: all 0.3s ease;
+}
+
+.anime-input:focus {
+  @apply border-purple-400;
+  box-shadow: 0 0 15px rgba(192, 132, 252, 0.3);
+}
+
+.anime-label {
+  @apply absolute left-4 top-3 text-gray-400 pointer-events-none;
+  transition: all 0.3s ease;
+}
+
+.anime-input:focus + .anime-label,
+.anime-input:not(:placeholder-shown) + .anime-label {
+  @apply text-purple-300 transform -translate-y-8 -translate-x-2 scale-75;
+}
+
+.anime-input-highlight {
+  @apply absolute bottom-0 left-0 w-full h-0.5 bg-purple-400;
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.anime-input:focus ~ .anime-input-highlight {
+  transform: scaleX(1);
+}
+
+.anime-button-primary {
+  background: linear-gradient(135deg, #9333ea 0%, #db2777 100%);
+  box-shadow: 0 4px 15px rgba(219, 39, 119, 0.3);
+}
+
+.anime-button-primary:hover {
+  box-shadow: 0 6px 20px rgba(219, 39, 119, 0.5);
+  transform: translateY(-1px);
+}
+
+.anime-button-primary:active {
+  transform: translateY(1px);
+}
+
+.anime-button-delete {
+  background: linear-gradient(135deg, #ea3333 0%, #db2736 100%);
+  box-shadow: 0 4px 15px rgba(219, 39, 119, 0.3);
+}
+
+.anime-button-delete:hover {
+  box-shadow: 0 6px 20px rgba(219, 39, 39, 0.5);
+  transform: translateY(-1px);
+}
+
+.anime-button-delete:active {
+  transform: translateY(1px);
+}
+
+.anime-loading-spinner {
+  @apply w-5 h-5 border-4 border-white border-t-transparent rounded-full;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.anime-message-pop {
+  animation: messagePop 0.5s ease-out;
+}
+
+@keyframes messagePop {
+  from {
+      opacity: 0;
+      transform: translateY(10px);
+  }
+  to {
+      opacity: 1;
+      transform: translateY(0);
+  }
+}
+
