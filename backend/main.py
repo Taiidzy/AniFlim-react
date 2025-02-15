@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # -------------------------
 # Настройки JWT
 # -------------------------
-SECRET_KEY = "gkj^%$PhvGAS6667o8*^&%$vk/kjhiabi_--98"  # Замените на секретный ключ
+SECRET_KEY = "secret_key"  # Замените на секретный ключ
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
