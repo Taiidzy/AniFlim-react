@@ -34,7 +34,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 # -------------------------
 # Инициализация Redis
 # -------------------------
-r = redis.Redis(host='95.163.231.160', port=6379, db=0, decode_responses=True)
+r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)  # Замените на ip адрес сервера с Redis
 
 # -------------------------
 # Инициализация FastAPI и CORS
