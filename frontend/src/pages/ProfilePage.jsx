@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
+import { ClipLoader } from "react-spinners";
 import axios from 'axios';
 
 import ChangeAvatar from '../components/profile/modals/СhangeAvatar';
@@ -17,6 +18,7 @@ const ProfilePage = () => {
   const [modalType, setModalType] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [activeTab, setActiveTab] = useState('watching');
+  const [totalTime, setTotalTime] = useState(0);
   const [animeList, setAnimeList] = useState([]);
   const [deleteData, setDeleteData] = useState({
     login: '',
@@ -28,14 +30,13 @@ const ProfilePage = () => {
     else {
       const get_user = async () => {
         try {
-          const response = await axios.get('http://localhost:5020/user/info', {
+          const response = await axios.get('https://aniflim.space/api/user/info', {
             headers: { "x-token": token }
           });
-          console.log(response.data)
           setUserData(response.data);
         } catch (error) {
           console.error(error);
-          if (error.response?.status === 401) {
+          if (error.response?.status === 401 || error.response?.status === 404) {
             localStorage.removeItem('token');
             setToken(null);
             navigate('/login');
@@ -47,40 +48,81 @@ const ProfilePage = () => {
   }, [token, navigate]);
 
   useEffect(() => {
-    const fetchAnimeData = async () => {
-      if (!userData?.anime) return;
+    const calculateTotalTime = async () => {
+      let timeString = '';
+      const totalTime = userData?.total_time;
   
-      const categoryMap = {
-        watching: 'watching',
-        watched: 'watched', 
-        planned: 'planned'
-      };
-  
-      const category = categoryMap[activeTab];
-      const animeIds = Object.keys(userData.anime[category] || {});
-  
-      try {
-        const requests = animeIds.map(id => 
-          axios.get(`https://anilibria.top/api/v1/anime/releases/${id}`)
-            .then(response => ({
-              release: response.data, // Оборачиваем данные в объект release
-              new_release_episode: null, // Добавляем недостающие поля
-              new_release_episode_ordinal: null
-            }))
-            .catch(error => {
-              console.error(`Ошибка получения аниме ${id}:`, error);
-              return null;
-            })
-        );
-  
-        const responses = await Promise.all(requests);
-        const validData = responses.filter(item => item !== null);
-        
-        setAnimeList(validData);
-      } catch (error) {
-        console.error('Ошибка при выполнении запросов:', error);
-        setAnimeList([]);
+      if (totalTime === 0) {
+        timeString = '0 Секунд';
+      } else if (totalTime < 60) {
+        // Секунды
+        const seconds = totalTime;
+        let secondsLabel = 'Секунд';
+        if (seconds % 10 === 1 && seconds % 100 !== 11) {
+          secondsLabel = 'Секунда';
+        } else if (seconds % 10 >= 2 && seconds % 10 <= 4 && (seconds % 100 < 10 || seconds % 100 >= 20)) {
+          secondsLabel = 'Секунды';
+        }
+        timeString = `${seconds} ${secondsLabel}`;
+      } else if (totalTime < 3600) {
+        // Минуты
+        const minutes = Math.floor(totalTime / 60);
+        let minutesLabel = 'Минут';
+        if (minutes % 10 === 1 && minutes % 100 !== 11) {
+          minutesLabel = 'Минута';
+        } else if (minutes % 10 >= 2 && minutes % 10 <= 4 && (minutes % 100 < 10 || minutes % 100 >= 20)) {
+          minutesLabel = 'Минуты';
+        }
+        timeString = `${minutes} ${minutesLabel}`;
+      } else {
+        // Часы
+        const hours = Math.floor(totalTime / 3600);
+        let hourLabel = 'Часов';
+        if (hours % 10 === 1 && hours % 100 !== 11) {
+          hourLabel = 'Час';
+        } else if (hours % 10 >= 2 && hours % 10 <= 4 && (hours % 100 < 10 || hours % 100 >= 20)) {
+          hourLabel = 'Часа';
+        }
+        timeString = `${hours} ${hourLabel}`;
       }
+      setTotalTime(timeString);
+    };
+    calculateTotalTime();
+  }, [userData]);  
+
+  useEffect(() => {
+    const fetchAnimeData = async () => {
+        const categoryMap = {
+            watching: 'watching',
+            watched: 'watched',
+            planed: 'planed'
+        };
+
+        const category = categoryMap[activeTab];
+        const categoryItems = userData[category] || [];
+
+        try {
+            // Создаем запросы для каждого элемента в категории
+            const requests = categoryItems.map(item =>
+                axios.get(`https://anilibria.top/api/v1/anime/releases/${item.id}`)
+                    .then(response => ({
+                        release: response.data,
+                        episode: item.episode
+                    }))
+                    .catch(error => {
+                        console.error(`Ошибка получения аниме ${item.id}:`, error);
+                        return null;
+                    })
+            );
+
+            const responses = await Promise.all(requests);
+            const validData = responses.filter(item => item !== null);
+
+            setAnimeList(validData);
+        } catch (error) {
+            console.error('Ошибка при выполнении запросов:', error);
+            setAnimeList([]);
+        }
     };
     
     fetchAnimeData();
@@ -89,11 +131,10 @@ const ProfilePage = () => {
   const handleLogout = async () => {
     try {
       const response = await axios.post(
-        'http://localhost:5020/user/logout',
+        'https://aniflim.space/api/user/logout',
         null, // Тело запроса отсутствует
         { headers: { "x-token": token } }
       );
-      console.log(response.data);
     } catch (error) {
       console.error(error);
       if (error.response?.status === 401) {
@@ -156,11 +197,17 @@ const ProfilePage = () => {
         <div className="space-y-4 lg:space-y-6">
           <div className="bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 sm:p-6 lg:p-8 shadow-2xl border-2 border-purple-500/30">
             <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full mx-auto mb-4">
-              <img
-                src={`http://localhost:5020${userData?.avatar}`}
+            {!userData ? (
+              <div className="flex justify-center items-center min-h-[150px]">
+                <ClipLoader color="#3498db" size={50} />
+              </div>) : (
+                <img
+                src={`https://aniflim.space/api${userData?.avatar}`}
                 alt="User Avatar"
                 className="w-full h-full object-cover rounded-full"
               />
+              )
+            }
             </div>
             <div className="space-y-2 text-center">
               <button
@@ -190,19 +237,29 @@ const ProfilePage = () => {
             </div>
           </div>
 
+          
           <div className="bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 sm:p-6 lg:p-8 shadow-2xl border-2 border-purple-500/30">
             <h2 className="text-lg sm:text-xl font-bold mb-3 text-center text-white">Информация</h2>
-            <div className="space-y-2">
-              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent text-center">
-                {userData?.login || 'Загрузка...'}
-              </h1>
-              <p className="text-xs sm:text-sm font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
-                Общее время просмотра: {userData?.createdAt || '4ч 32м'}
-              </p>
-              <p className="text-xs sm:text-sm font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
-                Всего просмотрено: 0
-              </p>
-            </div>
+            {!userData ? (
+              <div className="flex justify-center items-center">
+                <ClipLoader color="#3498db" size={50} />
+              </div>) : (
+                <div className="space-y-2">
+                  <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent text-center">
+                    {userData?.login}
+                  </h1>
+                  <p className="text-xs sm:text-sm font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+                    Общее время просмотра: {totalTime}
+                  </p>
+                  <p className="text-xs sm:text-sm font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+                    Всего просмотрено: {userData?.watched.length}
+                  </p>
+                  <p className="text-xs sm:text-sm font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+                    Всего аниме: {userData?.watching.length + userData?.watched.length + userData?.planed.length} 
+                  </p>
+                </div>
+              )
+            }
           </div>
         </div>
 
@@ -217,7 +274,7 @@ const ProfilePage = () => {
                 }`}
                 onClick={() => setActiveTab('watching')}
               >
-                Смотрю
+                Смотрю {userData?.watching.length}
               </button>
               <button
                 key={"watched"}
@@ -226,21 +283,32 @@ const ProfilePage = () => {
                 }`}
                 onClick={() => setActiveTab('watched')}
               >
-                Просмотрено
+                Просмотрено {userData?.watched.length}
               </button>
               <button
               key={"planed"}
                 className={`px-3 py-1 sm:px-4 sm:py-2 text-sm sm:text-base rounded-lg cursor-pointer transition-colors ${
-                  activeTab === 'planned' ? 'bg-orange-500 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                  activeTab === 'planed' ? 'bg-orange-500 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
                 }`}
-                onClick={() => setActiveTab('planned')}
+                onClick={() => setActiveTab('planed')}
               >
-                Запланировано
+                Запланировано {userData?.planed.length}
               </button>
             </div>
           </div>
-          
-          <AnimeCard animeList={animeList} />
+
+          {!userData ? (
+            <div className="flex justify-center items-center min-h-[570px]">
+              <ClipLoader color="#3498db" size={50} />
+            </div>) : (
+              <div>
+                {animeList.length === 0 ? 
+                  <div className="text-center text-gray-400 py-8">Нет аниме</div> : 
+                  <AnimeCard animeList={animeList} />
+                }
+              </div>
+            )
+          }
         </div>
       </div>
     </div>

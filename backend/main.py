@@ -1,22 +1,18 @@
-import os
-from datetime import datetime, timedelta
-
-import jwt
-from jwt import PyJWTError
-
-from fastapi import FastAPI, Depends, HTTPException, Header, UploadFile, File
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.types import JSON as SQLAlchemyJSON
+from fastapi import FastAPI, Depends, HTTPException, Header, UploadFile, File, WebSocket, Query
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
+from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.ext.mutable import MutableDict
-from passlib.context import CryptContext
 from fastapi.staticfiles import StaticFiles
+from datetime import datetime, timedelta
+from passlib.context import CryptContext
 from pydantic import BaseModel
-
-import redis
 import logging
+import redis
+import json
+import jwt
+import os
+
 
 # -------------------------
 # Логгирование
@@ -29,12 +25,12 @@ logger = logging.getLogger(__name__)
 # -------------------------
 SECRET_KEY = "secret_key"  # Замените на секретный ключ
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 99999999999999
 
 # -------------------------
 # Инициализация Redis
 # -------------------------
-r = redis.Redis(host='95.163.231.160', port=6379, db=0, decode_responses=True)
+r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)  # Замените на ip адрес сервера с Redis
 
 # -------------------------
 # Инициализация FastAPI и CORS
@@ -61,8 +57,8 @@ Base = declarative_base()
 # Папка для хранения аватарок
 # -------------------------
 AVATAR_DIR = "static/avatars"
-app.mount("/static", StaticFiles(directory="static"), name="static")
 os.makedirs(AVATAR_DIR, exist_ok=True)  # Создаём папку, если её нет
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # -------------------------
 # Модель пользователя с колонкой anime
@@ -73,11 +69,56 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     login = Column(String, unique=True, index=True)
     hashed_password = Column(String)
-    avatar = Column(String, default="")       # путь к аватарке
-    total_time = Column(String, default="")     # общее время (если требуется)
-    # Колонка anime для хранения JSON-структуры с данными об аниме
-    anime = Column(MutableDict.as_mutable(SQLAlchemyJSON), default=lambda: {})
+    avatar = Column(String)
+    total_time = Column(Integer, default=0)
+    total_episodes = Column(Integer, default=0)
 
+class Watching(Base):
+    __tablename__ = "watching"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    anime_id = Column(String, index=True)  # Идентификатор аниме (например, "1")
+    episode = Column(Integer)
+
+    user = relationship("User", back_populates="watching")
+
+class Watched(Base):
+    __tablename__ = "watched"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    anime_id = Column(String, index=True)
+    episode = Column(Integer)
+
+    user = relationship("User", back_populates="watched")
+
+class Planed(Base):
+    __tablename__ = "planed"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    anime_id = Column(String, index=True)
+    episode = Column(Integer)
+
+    user = relationship("User", back_populates="planned")
+
+class Progress(Base):
+    __tablename__ = "progress"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    anime_id = Column(Integer, index=True)
+    episode = Column(Integer)
+    currenttime = Column(Integer, nullable=False)
+
+    user = relationship("User", back_populates="progress")
+
+
+User.watching = relationship("Watching", back_populates="user")
+User.watched = relationship("Watched", back_populates="user")
+User.planned = relationship("Planed", back_populates="user")
+User.progress = relationship("Progress", back_populates="user")
 Base.metadata.create_all(bind=engine)
 
 # -------------------------
@@ -106,19 +147,11 @@ class LoginData(BaseModel):
     login: str
     password: str
 
-# Схема для обновления информации об аниме
-class AnimeUpdate(BaseModel):
-    animeid: str    # Идентификатор аниме (например, "1")
-    type: str       # Тип (например, "Watch")
-    episode: str    # Номер эпизода (например, "1")
-    currenttime: str  # Прогресс просмотра (например, "892")
-
 class UserResponse(BaseModel):
     id: int
     login: str
     avatar: str
     total_time: str
-    anime: dict
 
     class Config:
         orm_mode = True
@@ -133,20 +166,28 @@ class DeleteAccountData(BaseModel):
     password: str
 
 class AnimeAction(BaseModel):
-    action: str       # Тип действия: "watch", "viewed", "planned"
-    animeid: str
-    episode: str
-    currenttime: str
+    action: str       # Тип действия: "watching", "watched", "planed"
+    animeid: int
+    episode: int
 
 class AnimeDelete(BaseModel):
-    animeid: str
+    animeid: int
+
+class AnimeUser(BaseModel):
+    animeid: int
+
+class UpdateProgress(BaseModel):
+    animeid: int
+    episode: int
+    currenttime: int
+    duration: int
 
 
 # -------------------------
 # Эндпоинт регистрации
 # -------------------------
-@app.post("/register")
-def register(data: RegisterData, db: Session = Depends(get_db)):
+@app.post("/api/register")
+async def register(data: RegisterData, db: Session = Depends(get_db)):
     logger.info(f"Регистрация пользователя: {data.login}")
     existing_user = db.query(User).filter(User.login == data.login).first()
     if existing_user:
@@ -154,7 +195,7 @@ def register(data: RegisterData, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Пользователь с таким логином уже существует")
     
     hashed_password = pwd_context.hash(data.password)
-    user = User(login=data.login, hashed_password=hashed_password, anime={}, avatar="/static/avatars/default.png")
+    user = User(login=data.login, hashed_password=hashed_password, avatar="/static/avatars/default.png")
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -165,8 +206,8 @@ def register(data: RegisterData, db: Session = Depends(get_db)):
 # -------------------------
 # Эндпоинт авторизации (логин) с использованием JWT и Redis
 # -------------------------
-@app.post("/login")
-def login(data: LoginData, db: Session = Depends(get_db)):
+@app.post("/api/login")
+async def login(data: LoginData, db: Session = Depends(get_db)):
     logger.info(f"Попытка входа пользователя: {data.login}")
     user = db.query(User).filter(User.login == data.login).first()
     if not user or not pwd_context.verify(data.password, user.hashed_password):
@@ -193,7 +234,7 @@ def get_current_user(x_token: str = Header(...), db: Session = Depends(get_db)):
         if username is None:
             logger.error("Токен не содержит пользователя (sub)")
             raise HTTPException(status_code=401, detail="Неверный токен")
-    except PyJWTError:
+    except:
         logger.error("Ошибка декодирования JWT токена")
         raise HTTPException(status_code=401, detail="Неверный токен")
     
@@ -208,19 +249,68 @@ def get_current_user(x_token: str = Header(...), db: Session = Depends(get_db)):
     
     return user
 
+# Функция для получения пользователя через query параметр
+def get_current_user_from_query(token: str = Query(...), db: Session = Depends(get_db)):
+    return get_current_user(x_token=token, db=db)
+
 # -------------------------
 # Эндпоинт для получения информации о пользователе
 # -------------------------
-@app.get("/user/info", response_model=UserResponse)
-def get_user_info(current_user: User = Depends(get_current_user)):
+@app.get("/api/user/info")
+async def get_user_info(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     logger.info(f"Получение информации о пользователе {current_user.login}")
-    return current_user
+    planed = db.query(Planed).filter_by(user_id=current_user.id).all()
+    watching = db.query(Watching).filter_by(user_id=current_user.id).all()
+    watched = db.query(Watched).filter_by(user_id=current_user.id).all()
+    progress = db.query(Progress).filter_by(user_id=current_user.id).all()
+
+    planed_list = [
+        {
+            "id": planed_item.anime_id,
+            "episode": planed_item.episode,
+        } for planed_item in planed
+    ]
+
+    watching_list = [
+        {
+            "id": watching_item.anime_id,
+            "episode": watching_item.episode,
+        } for watching_item in watching
+    ]
+
+    watched_list = [
+        {
+            "id": watched_item.anime_id,
+            "episode": watched_item.episode,
+        } for watched_item in watched
+    ]
+
+    progress_list = [
+        {
+            "id": progress_item.anime_id,
+            "episode": progress_item.episode,
+            "currenttime": progress_item.currenttime,
+        } for progress_item in progress
+    ]
+
+    user = {
+        "id": current_user.id,
+        "login": current_user.login,
+        "avatar": current_user.avatar,
+        "total_time": current_user.total_time,
+        "total_episode": current_user.total_episodes,
+        "planed": planed_list,
+        "watching": watching_list,
+        "watched": watched_list,
+        "progress": progress_list
+    }
+    return user
 
 # -------------------------
 # Эндпоинт изменения пароля
 # -------------------------
-@app.patch("/user/password")
-def change_password(
+@app.patch("/api/user/password")
+async def change_password(
     data: ChangePasswordData,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -250,8 +340,8 @@ def change_password(
 # -------------------------
 # Эндпоинт удаления аккаунта
 # -------------------------
-@app.delete("/user/delete")
-def delete_account(
+@app.delete("/api/user/delete")
+async def delete_account(
     data: DeleteAccountData,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -290,7 +380,7 @@ def delete_account(
 # -------------------------
 # Эндпоинт изменения аватара
 # -------------------------
-@app.patch("/user/avatar")
+@app.patch("/api/user/avatar")
 async def update_avatar(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
@@ -334,8 +424,8 @@ async def update_avatar(
 # -------------------------
 # Эндпоинт выхода (logout)
 # -------------------------
-@app.post("/user/logout")
-def logout(current_user: User = Depends(get_current_user), x_token: str = Header(...)):
+@app.post("/api/user/logout")
+async def logout(current_user: User = Depends(get_current_user), x_token: str = Header(...)):
     r.delete(x_token)  # Удаляем токен из Redis
     logger.info(f"Пользователь {current_user.login} вышел из системы")
     return {"message": "Вы успешно вышли из системы"}
@@ -345,62 +435,241 @@ def logout(current_user: User = Depends(get_current_user), x_token: str = Header
 
 
 # -------------------------
-# Эндпоинты для работы с аниме
+# Эндпоинт добавления аниме в список
 # -------------------------
-@app.post("/anime")
-def update_anime(
+@app.post("/api/anime")
+async def update_anime(
     data: AnimeAction,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Обновление или добавление записи об аниме"""
+    """Обновление или добавление записи об аниме в соответствующую таблицу"""
     logger.info(f"Обновление аниме данных для пользователя {current_user.login}")
     
-    # Получаем текущие данные об аниме
-    anime_data = current_user.anime
+    try:
+        if data.action == "watching":
+            watching = Watching(user_id=current_user.id, anime_id=data.animeid, episode=data.episode)
+            db.add(watching)
+        elif data.action == "watched":
+            watched = Watched(user_id=current_user.id, anime_id=data.animeid, episode=data.episode)
+            db.add(watched)
+            current_user.total_episodes += data.episode
+        elif data.action == "planned":
+            planed = Planed(user_id=current_user.id, anime_id=data.animeid, episode=data.episode)
+            db.add(planed)
+        else:
+            raise HTTPException(status_code=400, detail="Неизвестное действие")
+        
+        db.commit()
+        db.refresh(current_user)
+    except Exception as e:
+        logger.error(f"Произошло исключение при обновлении данных аниме: {e}")
+        raise HTTPException(status_code=500, detail="Произошло исключение при обновлении данных аниме")
     
-    # Создаем раздел для действия, если его нет
-    if data.action not in anime_data:
-        anime_data[data.action] = {}
+# -------------------------
+# Эндпоинт изменения списка аниме
+# -------------------------
+@app.patch("/api/anime")
+async def patch_anime(
+    data: AnimeAction,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Обновление записи о просмотре аниме"""
+    logger.info(f"Обновление данных аниме для пользователя {current_user.login}")
     
-    # Обновляем или добавляем запись
-    anime_data[data.action][data.animeid] = {
-        "episode": data.episode,
-        "currenttime": data.currenttime
-    }
-    
-    # Сохраняем изменения
-    current_user.anime = anime_data
-    db.add(current_user)
-    db.commit()
-    db.refresh(current_user)
+    try:
+        if data.action == "watching":
+            existing = db.query(Watching).filter_by(user_id=current_user.id, anime_id=data.animeid).first()
+            if existing:
+                existing.episode = data.episode
+            else:
+                watching = Watching(user_id=current_user.id, anime_id=data.animeid, episode=data.episode)
+                db.add(watching)
+            db.query(Watched).filter_by(user_id=current_user.id, anime_id=data.animeid).delete()
+            db.query(Planed).filter_by(user_id=current_user.id, anime_id=data.animeid).delete()
+
+        elif data.action == "watched":
+            existing = db.query(Watched).filter_by(user_id=current_user.id, anime_id=data.animeid).first()
+            if existing:
+                old_episode = existing.episode
+                episode_diff = data.episode - old_episode
+                current_user.total_episodes += episode_diff
+                existing.episode = data.episode
+            else:
+                watched = Watched(user_id=current_user.id, anime_id=data.animeid, episode=data.episode)
+                db.add(watched)
+                current_user.total_episodes += data.episode
+            
+            db.query(Watching).filter_by(user_id=current_user.id, anime_id=data.animeid).delete()
+            db.query(Planed).filter_by(user_id=current_user.id, anime_id=data.animeid).delete()
+
+        elif data.action == "planned":
+            existing = db.query(Planed).filter_by(user_id=current_user.id, anime_id=data.animeid).first()
+            if existing:
+                existing.episode = data.episode
+            else:
+                planed = Planed(user_id=current_user.id, anime_id=data.animeid, episode=data.episode)
+                db.add(planed)
+            db.query(Watching).filter_by(user_id=current_user.id, anime_id=data.animeid).delete()
+            db.query(Watched).filter_by(user_id=current_user.id, anime_id=data.animeid).delete()
+
+        else:
+            raise HTTPException(status_code=400, detail="Неизвестное действие")
+        
+        db.commit()
+        db.refresh(current_user)
+    except Exception as e:
+        logger.error(f"Произошло исключение при обновлении данных аниме: {e}")
+        raise HTTPException(status_code=500, detail="Произошло исключение при обновлении данных аниме")
     
     return {"message": "Данные аниме успешно обновлены"}
 
-@app.delete("/anime")
-def delete_anime(
+# -------------------------
+# Эндпоинт для удаления аниме из списка
+# -------------------------
+@app.delete("/api/anime")
+async def delete_anime(
     data: AnimeDelete,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Удаление всех записей об аниме по ID"""
+    """Удаление записи об аниме из таблиц watching, watched или planed"""
     logger.info(f"Удаление аниме {data.animeid} для пользователя {current_user.login}")
     
-    anime_data = current_user.anime
+    try:
+        watched_entries = db.query(Watched).filter_by(user_id=current_user.id, anime_id=data.animeid).all()
+        for entry in watched_entries:
+            current_user.total_episodes -= entry.episode
+
+        db.query(Watching).filter_by(user_id=current_user.id, anime_id=data.animeid).delete()
+        db.query(Watched).filter_by(user_id=current_user.id, anime_id=data.animeid).delete()
+        db.query(Planed).filter_by(user_id=current_user.id, anime_id=data.animeid).delete()
+        
+        db.commit()
+        db.refresh(current_user)
+    except Exception as e:
+        logger.error(f"Произошло исключение при обновлении данных аниме: {e}")
+        raise HTTPException(status_code=500, detail="Произошло исключение при обновлении данных аниме")
     
-    # Удаляем аниме из всех разделов
-    for action in list(anime_data.keys()):
-        if data.animeid in anime_data.get(action, {}):
-            del anime_data[action][data.animeid]
+    return {"message": f"Данные аниме {data.animeid} успешно удалены"}
+
+
+# -------------------------
+# Эндпоинт для получения информации об аниме в списке
+# -------------------------
+@app.post("/api/user/anime")
+async def user_anime(
+    data: AnimeUser,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    logger.info(f"Запрос для получения списка для аниме {data.animeid} для пользователя {current_user.login}")
+    anime = {}
+
+    try:
+        item = db.query(Watching).filter_by(user_id=current_user.id, anime_id=data.animeid).first()
+        if item:
+            anime = {
+                "id": item.anime_id,
+                "episode": item.episode,
+                "status": "watching"
+            }
+            return anime
+        item = db.query(Watched).filter_by(user_id=current_user.id, anime_id=data.animeid).first()
+        if item:
+            anime = {
+                "id": item.anime_id,
+                "episode": item.episode,
+                "status": "watched"
+            }
+            return anime
+        item = db.query(Planed).filter_by(user_id=current_user.id, anime_id=data.animeid).first()
+        if item:
+            anime = {
+                "id": item.anime_id,
+                "episode": item.episode,
+                "status": "planed"
+            }
+            return anime
+    except Exception as e:
+        logger.error(f"Произошло исключение при обновлении данных аниме: {e}")
+        raise HTTPException(status_code=500, detail="Произошло исключение при обновлении данных аниме")
+    anime = {
+        "status": "not"
+    }
+    return anime
+
+
+# -------------------------
+# Эндпоинт для прогресса просмотра
+# -------------------------
+@app.websocket("/ws")
+async def anime_progress(
+    websocket: WebSocket,
+    current_user: User = Depends(get_current_user_from_query),
+    db: Session = Depends(get_db)):
+    
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        try:
+            data = json.loads(data)
+            animeid = data['animeid']
+            episode = data['episode']
+            current_time = int(data['currenttime'])
+
+            progress = db.query(Progress).filter_by(
+                user_id=current_user.id, 
+                anime_id=animeid, 
+                episode=episode
+            ).first()
+
+            time_diff = 0
+            if progress:
+                old_time = progress.currenttime
+                if current_time > old_time:
+                    time_diff = current_time - old_time
+                progress.currenttime = current_time
+            else:
+                time_diff = current_time
+                progress = Progress(
+                    user_id=current_user.id,
+                    anime_id=animeid,
+                    episode=episode,
+                    currenttime=current_time
+                )
+                db.add(progress)
+
+            current_user.total_time += time_diff
+            db.commit()
+            db.refresh(current_user)
             
-            # Удаляем пустые разделы
-            if not anime_data[action]:
-                del anime_data[action]
-    
-    # Сохраняем изменения
-    current_user.anime = anime_data
-    db.add(current_user)
-    db.commit()
-    db.refresh(current_user)
-    
-    return {"message": "Данные аниме успешно удалены"}
+            await websocket.send_text("Progress successfully updated")
+        except Exception as e:
+            logger.error(f"Ошибка: {e}")
+            await websocket.send_text(f"Error: {str(e)}")
+
+
+@app.post('/api/user/anime/progress/get')
+async def get_progress(
+    data: AnimeUser,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    logger.info(f"Запрос для получения прогресса для аниме {data.animeid} для пользователя {current_user.login}")
+    anime = {}
+
+    try:
+        item = db.query(Progress).filter_by(user_id=current_user.id, anime_id=data.animeid).first()
+        if item:
+            anime = {
+                "id": item.anime_id,
+                "episode": item.episode,
+                "currenttime": item.currenttime
+            }
+            return anime
+        raise HTTPException(status_code=404, detail="Прогресс не найден")
+    except Exception as e:
+        logger.error(f"Произошло исключение при обновлении данных аниме: {e}")
+        raise HTTPException(status_code=500, detail="Произошло исключение при обновлении данных аниме")

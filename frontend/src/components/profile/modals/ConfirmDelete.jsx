@@ -6,7 +6,6 @@ const ConfirmDelete = ({ token, setModalType, setToken, deleteData }) => {
 
     const handleSubmitDelete = async e => {
         e.preventDefault();
-        console.log(deleteData);
         try {
             await axios.delete('http://localhost:5020/user/delete', {
                 data: deleteData,

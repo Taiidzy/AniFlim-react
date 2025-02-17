@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from 'react-router-dom';
 
-const Episode = ({ episodes }) => {
+const Episode = ({ episodes, currentEpisode }) => {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {episodes
@@ -14,7 +14,7 @@ const Episode = ({ episodes }) => {
                     <Link
                     key={episode.id}
                     to={`/episode/${episode.id}`}
-                    className="group relative block rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all"
+                    className={`group relative block rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all border-2 ${episode.ordinal == currentEpisode ? 'border-red-600' : ''}`}
                     >
                         <div className="aspect-video bg-gray-900">
                             <div 

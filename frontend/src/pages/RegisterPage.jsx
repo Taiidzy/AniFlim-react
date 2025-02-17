@@ -22,11 +22,17 @@ const RegisterPage = () => {
         }
         setIsLoading(true);
         try {
-            const response = await axios.post('http://localhost:5020/register', {
+            const response = await axios.post('https://aniflim.space/api/register', {
                 login: login,
                 password: password,
             });
             setMessage(response.data.message);
+
+            if (data.status === 400) {
+                setMessage('Пользователь с таким логином уже существует!');
+                return;
+            }
+            
             setLogin('');
             setPassword('');
             setConfirmPassword('');
@@ -106,7 +112,7 @@ const RegisterPage = () => {
                     {message && (
                         <div
                         className={`mt-6 p-3 rounded-lg border text-center ${
-                        message.includes('Все поля') || message.includes('Пароли не совпадают')
+                        message.includes('Все поля') || message.includes('Пароли не совпадают') || message.includes('Пользователь')
                         ? 'bg-yellow-900/30 border-yellow-400 text-yellow-300'
                         : message.includes('Ошибка')
                         ? 'bg-red-900/30 border-red-400 text-red-300'

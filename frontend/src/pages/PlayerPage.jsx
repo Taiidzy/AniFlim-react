@@ -180,7 +180,6 @@ const PlayerPage = () => {
         quality={quality}
         id={id}
         videoRef={videoRef}
-        currentTime={currentTime}
         setCurrentTime={setCurrentTime}
         setIsPlaying={setIsPlaying}
         togglePlayPause={togglePlayPause}

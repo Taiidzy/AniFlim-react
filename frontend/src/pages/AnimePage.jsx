@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ClipLoader } from "react-spinners";
 import axios from "axios";
 import { FiMenu, FiX } from "react-icons/fi";
+
 import SideBar from "../components/anime/SideBar";
 import EpisodesList from "../components/anime/EpisodesList";
 import AgeRatingBadge from "../components/anime/AgeRatingBadge";
@@ -12,8 +13,11 @@ const AnimePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [anime, setAnime] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [userData, setUserData] = useState(null);
   const [franchises, setFranchises] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [listStatus, setListStatus] = useState('');
 
   useEffect(() => {
     const fetchAnime = async () => {
@@ -32,7 +36,6 @@ const AnimePage = () => {
 
   useEffect(() => {
     if (!anime) return; // Проверка на null перед выполнением запроса
-  
     const getFranchises = async () => {
       try {
         const response = await axios.get(
@@ -46,8 +49,68 @@ const AnimePage = () => {
   
     getFranchises();
   }, [anime]); // Зависимостью остается только anime, без anime.id
-  
 
+  const fetchData = async () => {
+    if (!token) return;
+    try {
+      const response = await axios.post('https://aniflim.space/api/user/anime', {
+        animeid: anime.id
+      }, {
+        headers: { "x-token": token }
+      });
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        setUserData(null);
+        setToken(null);
+      }
+      setListStatus(response.data.status);
+      setUserData(response.data);
+    } catch (error) {
+      console.log('error: ', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [token, anime]);
+
+  const updateList = async (newListStatus) => {
+    if (!token) return;
+    try {
+      if (newListStatus === "not") {
+        const response = await axios.delete('https://aniflim.space/api/anime', {
+          headers: { "x-token": token },
+          data: { animeid: anime.id }
+        });
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          setUserData(null);
+          setToken(null);
+          fetchData();
+        }
+        fetchData();
+      } else {
+        const response = await axios.patch('https://aniflim.space/api/anime', {
+          action: newListStatus,
+          animeid: anime.id,
+          episode: userData.episode || 1
+        }, {
+          headers: { "x-token": token }
+        });
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          setUserData(null);
+          setToken(null);
+          fetchData();
+        }
+        fetchData();
+      }
+    } catch (error) {
+      console.log('error: ', error);
+      fetchData();
+    }
+  };
+  
   if (!anime) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -101,7 +164,7 @@ const AnimePage = () => {
               />
             </div>
             {anime.genres?.length > 0 && (
-              <div className="flex flex-wrap justify-center md:justify-start gap-2">
+              <div className="flex flex-wrap justify-center md:justify-start gap-2 items-center">
                 {anime.genres.map((genre) => (
                   <span
                     key={genre.id}
@@ -110,12 +173,26 @@ const AnimePage = () => {
                     {genre.name}
                   </span>
                 ))}
+
+                {userData ? (
+                  <select
+                    name="list"
+                    value={listStatus}
+                    onChange={(e) => updateList(e.target.value)} // Вызов функции updateList
+                    className="bg-gray-800/70 text-white text-sm sm:text-base px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg backdrop-blur-sm border border-gray-600 focus:border-red-500 outline-none transition-all cursor-pointer"
+                  >
+                    <option value="not">Нету в списках</option>
+                    <option value="watching">Смотрю</option>
+                    <option value="watched">Просмотрено</option>
+                    <option value="planed">Запланировано</option>
+                  </select>
+                ) : null}
               </div>
             )}
           </div>
         </div>
 
-        <EpisodesList episodes={anime.episodes} />
+        <EpisodesList episodes={anime.episodes} currentEpisode={userData?.episode} />
       </div>
 
       {/* Sidebar (Hidden on Mobile by Default) */}
