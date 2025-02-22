@@ -1,6 +1,4 @@
-backend/aniflim.db
-backend/static/avatars/
-backend/__pycache__/main.cpython-313.pyc
+backend/*
 
 # Logs
 logs
@@ -26,3 +24,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+backend/main.py

@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from passlib.context import CryptContext
 from pydantic import BaseModel
 import logging
+import hashlib
 import redis
 import json
 import jwt
@@ -23,19 +24,19 @@ logger = logging.getLogger(__name__)
 # -------------------------
 # Настройки JWT
 # -------------------------
-SECRET_KEY = "secret_key"  # Замените на секретный ключ
+SECRET_KEY = "gykVAC6R56io0-=0(&^323ftyg)aD8e77&^@#dh-_=_)dsa"  # Замените на секретный ключ
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 99999999999999
+ACCESS_TOKEN_EXPIRE_MINUTES = 99999
 
 # -------------------------
 # Инициализация Redis
 # -------------------------
-r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)  # Замените на ip адрес сервера с Redis
+r = redis.Redis(host='95.163.231.160', port=6379, db=0, decode_responses=True)  # Замените на ip адрес сервера с Redis
 
 # -------------------------
 # Инициализация FastAPI и CORS
 # -------------------------
-app = FastAPI()
+app = FastAPI(root_path="/api")
 
 app.add_middleware(
     CORSMiddleware,
@@ -56,9 +57,8 @@ Base = declarative_base()
 # -------------------------
 # Папка для хранения аватарок
 # -------------------------
-AVATAR_DIR = "static/avatars"
-os.makedirs(AVATAR_DIR, exist_ok=True)  # Создаём папку, если её нет
-app.mount("/static", StaticFiles(directory="static"), name="static")
+AVATAR_DIR = "/var/www/aniflim/static/avatars"
+os.makedirs(AVATAR_DIR, exist_ok=True)
 
 # -------------------------
 # Модель пользователя с колонкой anime
@@ -127,6 +127,12 @@ Base.metadata.create_all(bind=engine)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # -------------------------
+# Хеширование картинки
+# -------------------------
+def generate_hash(filename: str) -> str:
+    return hashlib.md5(filename.encode()).hexdigest()
+
+# -------------------------
 # Зависимость для работы с сессией SQLAlchemy
 # -------------------------
 def get_db():
@@ -146,6 +152,7 @@ class RegisterData(BaseModel):
 class LoginData(BaseModel):
     login: str
     password: str
+    nologout: bool = False
 
 class UserResponse(BaseModel):
     id: int
@@ -186,7 +193,7 @@ class UpdateProgress(BaseModel):
 # -------------------------
 # Эндпоинт регистрации
 # -------------------------
-@app.post("/api/register")
+@app.post("/register")
 async def register(data: RegisterData, db: Session = Depends(get_db)):
     logger.info(f"Регистрация пользователя: {data.login}")
     existing_user = db.query(User).filter(User.login == data.login).first()
@@ -206,21 +213,29 @@ async def register(data: RegisterData, db: Session = Depends(get_db)):
 # -------------------------
 # Эндпоинт авторизации (логин) с использованием JWT и Redis
 # -------------------------
-@app.post("/api/login")
+@app.post("/login")
 async def login(data: LoginData, db: Session = Depends(get_db)):
     logger.info(f"Попытка входа пользователя: {data.login}")
     user = db.query(User).filter(User.login == data.login).first()
     if not user or not pwd_context.verify(data.password, user.hashed_password):
         logger.warning(f"Неверный логин или пароль для пользователя: {data.login}")
         raise HTTPException(status_code=400, detail="Неверный логин или пароль")
-    
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    payload = {"sub": user.login, "exp": datetime.utcnow() + access_token_expires}
-    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-    
-    # Сохраняем токен в Redis с временем жизни
-    r.set(token, user.login, ex=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
-    
+
+    if data.nologout:
+        # Токен без срока действия
+        payload = {"sub": user.login}
+        token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+        # Сохраняем токен в Redis без времени жизни (бесконечно, пока не удалится вручную)
+        r.set(token, user.login)
+        logger.info(f"Пользователь {data.login} авторизован с бессрочным токеном")
+    else:
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        payload = {"sub": user.login, "exp": datetime.utcnow() + access_token_expires}
+        token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+        # Сохраняем токен в Redis с временем жизни
+        r.set(token, user.login, ex=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+        logger.info(f"Пользователь {data.login} авторизован с токеном, истекающим через {ACCESS_TOKEN_EXPIRE_MINUTES} минут")
+
     logger.info(f"Пользователь {data.login} успешно авторизован")
     return {"token": token}
 
@@ -256,7 +271,7 @@ def get_current_user_from_query(token: str = Query(...), db: Session = Depends(g
 # -------------------------
 # Эндпоинт для получения информации о пользователе
 # -------------------------
-@app.get("/api/user/info")
+@app.get("/user/info")
 async def get_user_info(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     logger.info(f"Получение информации о пользователе {current_user.login}")
     planed = db.query(Planed).filter_by(user_id=current_user.id).all()
@@ -309,7 +324,7 @@ async def get_user_info(current_user: User = Depends(get_current_user), db: Sess
 # -------------------------
 # Эндпоинт изменения пароля
 # -------------------------
-@app.patch("/api/user/password")
+@app.patch("/user/password")
 async def change_password(
     data: ChangePasswordData,
     current_user: User = Depends(get_current_user),
@@ -340,7 +355,7 @@ async def change_password(
 # -------------------------
 # Эндпоинт удаления аккаунта
 # -------------------------
-@app.delete("/api/user/delete")
+@app.delete("/user/delete")
 async def delete_account(
     data: DeleteAccountData,
     current_user: User = Depends(get_current_user),
@@ -380,51 +395,56 @@ async def delete_account(
 # -------------------------
 # Эндпоинт изменения аватара
 # -------------------------
-@app.patch("/api/user/avatar")
+@app.patch("/user/avatar")
 async def update_avatar(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     logger.info(f"Попытка обновления аватара для пользователя {current_user.login}")
+    
     # Проверяем формат файла
     allowed_types = ["image/jpeg", "image/png"]
     if file.content_type not in allowed_types:
         logger.warning(f"Неверный формат файла для аватара пользователя {current_user.login}: {file.content_type}")
         raise HTTPException(status_code=400, detail="Допустимые форматы: JPEG, PNG")
-
+    
+    # Проверяем, состоит ли login только из английских букв и цифр
+    if not current_user.login.isascii() or not current_user.login.isalnum():
+        filename = generate_hash(file.filename) + ".jpg"
+    else:
+        filename = f"{current_user.login}.jpg"
+    
     # Удаляем старый аватар, если он не default.png
     old_avatar = current_user.avatar
     if old_avatar and "default.png" not in old_avatar:
-        old_avatar_path = old_avatar.lstrip("/")
+        old_avatar_path = os.path.join("/var/www/aniflim", old_avatar.lstrip("/"))
         if os.path.exists(old_avatar_path):
             os.remove(old_avatar_path)
             logger.info(f"Старый аватар {old_avatar_path} удалён для пользователя {current_user.login}")
         else:
             logger.warning(f"Старый аватар {old_avatar_path} не найден для удаления у пользователя {current_user.login}")
-
+    
     # Генерируем путь для сохранения нового аватара
-    file_extension = file.filename.split(".")[-1]
-    filename = f"{current_user.login}.{file_extension}"
     file_path = os.path.join(AVATAR_DIR, filename)
-
+    
     # Сохраняем файл
     with open(file_path, "wb") as f:
         f.write(await file.read())
-
+    
     # Обновляем путь к аватару в БД
-    current_user.avatar = f"/{file_path}"  # Храним путь в БД
+    current_user.avatar = f"/static/avatars/{filename}"
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
-
+    
     logger.info(f"Аватар пользователя {current_user.login} обновлён: {current_user.avatar}")
     return {"message": "Аватар успешно обновлён", "avatar_url": current_user.avatar}
 
 # -------------------------
 # Эндпоинт выхода (logout)
 # -------------------------
-@app.post("/api/user/logout")
+@app.post("/user/logout")
 async def logout(current_user: User = Depends(get_current_user), x_token: str = Header(...)):
     r.delete(x_token)  # Удаляем токен из Redis
     logger.info(f"Пользователь {current_user.login} вышел из системы")
@@ -437,7 +457,7 @@ async def logout(current_user: User = Depends(get_current_user), x_token: str = 
 # -------------------------
 # Эндпоинт добавления аниме в список
 # -------------------------
-@app.post("/api/anime")
+@app.post("/anime")
 async def update_anime(
     data: AnimeAction,
     current_user: User = Depends(get_current_user),
@@ -469,7 +489,7 @@ async def update_anime(
 # -------------------------
 # Эндпоинт изменения списка аниме
 # -------------------------
-@app.patch("/api/anime")
+@app.patch("/anime")
 async def patch_anime(
     data: AnimeAction,
     current_user: User = Depends(get_current_user),
@@ -504,7 +524,7 @@ async def patch_anime(
             db.query(Watching).filter_by(user_id=current_user.id, anime_id=data.animeid).delete()
             db.query(Planed).filter_by(user_id=current_user.id, anime_id=data.animeid).delete()
 
-        elif data.action == "planned":
+        elif data.action == "planed":
             existing = db.query(Planed).filter_by(user_id=current_user.id, anime_id=data.animeid).first()
             if existing:
                 existing.episode = data.episode
@@ -528,7 +548,7 @@ async def patch_anime(
 # -------------------------
 # Эндпоинт для удаления аниме из списка
 # -------------------------
-@app.delete("/api/anime")
+@app.delete("/anime")
 async def delete_anime(
     data: AnimeDelete,
     current_user: User = Depends(get_current_user),
@@ -558,7 +578,7 @@ async def delete_anime(
 # -------------------------
 # Эндпоинт для получения информации об аниме в списке
 # -------------------------
-@app.post("/api/user/anime")
+@app.post("/user/anime")
 async def user_anime(
     data: AnimeUser,
     current_user: User = Depends(get_current_user),
@@ -607,12 +627,22 @@ async def user_anime(
 @app.websocket("/ws")
 async def anime_progress(
     websocket: WebSocket,
-    current_user: User = Depends(get_current_user_from_query),
-    db: Session = Depends(get_db)):
+    token: str = Query(...),  # Получаем токен из query-параметра
+    db: Session = Depends(get_db)
+):
     
+    # Аутентификация пользователя
+    try:
+        user = get_current_user_from_query(token=token, db=db)
+    except HTTPException as e:
+        return
+
     await websocket.accept()
+    
     while True:
         data = await websocket.receive_text()
+        logger.info(f"WebSocket data from {user.login}: {data}")
+        
         try:
             data = json.loads(data)
             animeid = data['animeid']
@@ -620,30 +650,55 @@ async def anime_progress(
             current_time = int(data['currenttime'])
 
             progress = db.query(Progress).filter_by(
-                user_id=current_user.id, 
-                anime_id=animeid, 
-                episode=episode
+                user_id=user.id, 
+                anime_id=animeid
+            ).first()
+
+            watching = db.query(Watching).filter_by(
+                user_id=user.id, 
+                anime_id=animeid
+            ).first()
+
+            watched = db.query(Watched).filter_by(
+                user_id=user.id, 
+                anime_id=animeid
+            ).first()
+
+            planed = db.query(Planed).filter_by(
+                user_id=user.id, 
+                anime_id=animeid
             ).first()
 
             time_diff = 0
             if progress:
                 old_time = progress.currenttime
+                old_episode = progress.episode
                 if current_time > old_time:
                     time_diff = current_time - old_time
                 progress.currenttime = current_time
+                if old_episode != episode:
+                    progress.episode = episode
+                    progress.currenttime = 0
             else:
                 time_diff = current_time
                 progress = Progress(
-                    user_id=current_user.id,
+                    user_id=user.id,
                     anime_id=animeid,
                     episode=episode,
                     currenttime=current_time
                 )
                 db.add(progress)
 
-            current_user.total_time += time_diff
+            if watching:
+                watching.episode = episode
+            elif watched:
+                watched.episode = episode
+            elif planed:
+                planed.episode = episode
+
+            user.total_time += time_diff
             db.commit()
-            db.refresh(current_user)
+            db.refresh(user)
             
             await websocket.send_text("Progress successfully updated")
         except Exception as e:
@@ -651,7 +706,7 @@ async def anime_progress(
             await websocket.send_text(f"Error: {str(e)}")
 
 
-@app.post('/api/user/anime/progress/get')
+@app.post('/user/anime/progress/get')
 async def get_progress(
     data: AnimeUser,
     current_user: User = Depends(get_current_user),
@@ -664,6 +719,7 @@ async def get_progress(
         item = db.query(Progress).filter_by(user_id=current_user.id, anime_id=data.animeid).first()
         if item:
             anime = {
+                "userId": current_user.id,
                 "id": item.anime_id,
                 "episode": item.episode,
                 "currenttime": item.currenttime

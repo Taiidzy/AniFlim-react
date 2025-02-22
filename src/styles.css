@@ -1,0 +1,222 @@
+@import "tailwindcss";
+
+body {
+    margin: 0;
+    font-family: 'Arial', sans-serif;
+    background-color: #121212;
+    background: linear-gradient( rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6) ), url('/Background.jpg') no-repeat center center fixed;
+    -webkit-background-size: cover;
+    -moz-background-size:  cover;
+    -o-background-size: cover;
+    background-size: cover;
+    color: #333;
+  }
+  
+  /* Пример использования первой палитры */
+  .header, .footer {
+    background-color: #7a1d5b;
+    color: #ffffff;
+    text-align: center;
+    padding: 1rem;
+  }
+  
+  .header a {
+    color: inherit;
+    text-decoration: none;
+    font-size: 24px;
+  }
+  
+  .search-bar {
+    text-align: center;
+    margin: 2rem 0;
+  }
+  
+  .search-bar input {
+    padding: 0.5rem;
+    width: 60%;
+    max-width: 400px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .search-bar button {
+    padding: 0.5rem 1rem;
+    margin-left: 0.5rem;
+    border: none;
+    background-color: #169873;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .search-results {
+    list-style: none;
+    padding: 0;
+    margin: 1rem auto;
+    max-width: 400px;
+    text-align: left;
+  }
+  
+  .search-results li {
+    padding: 0.5rem;
+    border-bottom: 1px solid #ccc;
+    cursor: pointer;
+  }
+  
+  .search-results li:hover {
+    background-color: #F49FBC;
+  }
+  
+  /* Стили для расписания */
+  .schedule {
+    padding: 1rem;
+  }
+  
+  .schedule-days {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+  
+  .schedule-days button {
+    background-color: #2B193D;
+    color: #FFD3BA;
+    border: none;
+    margin: 0.25rem;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  
+  .schedule-days button.active {
+    background-color: #4B8F8C;
+  }
+  
+  /* Адаптивность */
+  @media (max-width: 768px) {
+    .search-bar input {
+      width: 80%;
+    }
+  }
+  
+/* Для вебкит-браузеров (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px; /* Ширина скроллбара */
+}
+
+::-webkit-scrollbar-track {
+  background: transparent; /* Прозрачный фон трека */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888; /* Цвет ползунка */
+  border-radius: 4px; /* Закругленные углы */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555; /* Цвет ползунка при наведении */
+}
+
+/* Для Firefox */
+* {
+  scrollbar-width: thin; /* Тонкий скроллбар */
+  scrollbar-color: #888 transparent; /* Цвет ползунка и трека */
+}
+
+@keyframes input-highlight {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.anime-input-group {
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.anime-input {
+  @apply w-full bg-gray-700/50 border-2 border-gray-600 rounded-lg px-4 py-3 text-gray-100 focus:outline-none;
+  transition: all 0.3s ease;
+}
+
+.anime-input:focus {
+  @apply border-purple-400;
+  box-shadow: 0 0 15px rgba(192, 132, 252, 0.3);
+}
+
+.anime-label {
+  @apply absolute left-4 top-3 text-gray-400 pointer-events-none;
+  transition: all 0.3s ease;
+}
+
+.anime-input:focus + .anime-label,
+.anime-input:not(:placeholder-shown) + .anime-label {
+  @apply text-purple-300 transform -translate-y-8 -translate-x-2 scale-75;
+}
+
+.anime-input-highlight {
+  @apply absolute bottom-0 left-0 w-full h-0.5 bg-purple-400;
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.anime-input:focus ~ .anime-input-highlight {
+  transform: scaleX(1);
+}
+
+.anime-button-primary {
+  background: linear-gradient(135deg, #9333ea 0%, #db2777 100%);
+  box-shadow: 0 4px 15px rgba(219, 39, 119, 0.3);
+}
+
+.anime-button-primary:hover {
+  box-shadow: 0 6px 20px rgba(219, 39, 119, 0.5);
+  transform: translateY(-1px);
+}
+
+.anime-button-primary:active {
+  transform: translateY(1px);
+}
+
+.anime-button-delete {
+  background: linear-gradient(135deg, #ea3333 0%, #db2736 100%);
+  box-shadow: 0 4px 15px rgba(219, 39, 119, 0.3);
+}
+
+.anime-button-delete:hover {
+  box-shadow: 0 6px 20px rgba(219, 39, 39, 0.5);
+  transform: translateY(-1px);
+}
+
+.anime-button-delete:active {
+  transform: translateY(1px);
+}
+
+.anime-loading-spinner {
+  @apply w-5 h-5 border-4 border-white border-t-transparent rounded-full;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.anime-message-pop {
+  animation: messagePop 0.5s ease-out;
+}
+
+@keyframes messagePop {
+  from {
+      opacity: 0;
+      transform: translateY(10px);
+  }
+  to {
+      opacity: 1;
+      transform: translateY(0);
+  }
+}
+
+.nologouton {
+  background: linear-gradient(135deg, #9333ea 0%, #db2777 100%);
+  border-color: transparent;
+}
